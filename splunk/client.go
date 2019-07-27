@@ -35,7 +35,7 @@ type xmlSKey struct {
 
 func dashboardCreate(c *resty.Client, d *Dashboard) (r *Dashboard, err error) {
 	body := fmt.Sprintf("name=%s&eai:data=%s", d.Name, d.Data)
-	_, err = c.R().SetBody([]byte(body)).Post("serviceNS/admin/search/data/ui/views")
+	_, err = c.R().SetBody([]byte(body)).Post(fmt.Sprintf("serviceNS/%s/search/data/ui/views", c.UserInfo.Username))
 	if err != nil {
 		return r, err
 	}
@@ -46,7 +46,7 @@ func dashboardCreate(c *resty.Client, d *Dashboard) (r *Dashboard, err error) {
 }
 
 func dashboardRead(c *resty.Client, n string) (r *Dashboard, err error) {
-	resp, err := c.R().Get(fmt.Sprintf("serviceNS/admin/search/data/ui/views/%s", n))
+	resp, err := c.R().Get(fmt.Sprintf("serviceNS/%s/search/data/ui/views/%s", c.UserInfo.Username, n))
 	if err != nil {
 		return r, err
 	}
