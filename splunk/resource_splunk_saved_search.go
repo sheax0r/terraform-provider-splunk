@@ -644,7 +644,7 @@ func resourceSplunkSavedSearch() *schema.Resource {
 }
 
 func resourceSplunkSavedSearchCreate(d *schema.ResourceData, meta interface{}) error {
-	c := meta.(*splunk.Client)
+	c, _ := meta.(*Config).Client()
 
 	s := savedSearchFromResourceData(d)
 
@@ -665,7 +665,7 @@ func resourceSplunkSavedSearchCreate(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceSplunkSavedSearchRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*splunk.Client)
+	client, _ := meta.(*Config).Client()
 	savedSearch, err := client.SavedSearchRead(d.Id())
 	if err != nil {
 		if strings.Contains(err.Error(), "404") {
@@ -821,7 +821,7 @@ func flattenAcl(a *splunk.ACL) []interface{} {
 }
 
 func resourceSplunkSavedSearchUpdate(d *schema.ResourceData, meta interface{}) error {
-	c := meta.(*splunk.Client)
+	c, _ := meta.(*Config).Client()
 
 	s := savedSearchFromResourceData(d)
 
@@ -848,7 +848,7 @@ func resourceSplunkSavedSearchAclUpdate(c *splunk.Client, s *splunk.SavedSearch)
 }
 
 func resourceSplunkSavedSearchDelete(d *schema.ResourceData, meta interface{}) error {
-	c := meta.(*splunk.Client)
+	c, _ := meta.(*Config).Client()
 
 	log.Printf("[INFO] Deleting Splunk Saved Search: %s", d.Id())
 

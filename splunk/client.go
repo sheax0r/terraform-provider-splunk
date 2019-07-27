@@ -1,8 +1,10 @@
 package splunk
 
 import (
-	"encoding/xml"
+	"encoding/json"
 	"fmt"
+	"log"
+	"net/url"
 
 	resty "gopkg.in/resty.v1"
 )
@@ -13,57 +15,47 @@ type Dashboard struct {
 }
 
 type dashboardResponse struct {
-	Entry xmlEntry `xml:"entry"`
-}
-
-type xmlEntry struct {
-	Content xmlContent `xml:"content"`
-}
-
-type xmlContent struct {
-	SDict xmlSDict `xml:"s:dict"`
-}
-
-type xmlSDict struct {
-	Keys []xmlSKey `xml:"s:key"`
-}
-
-type xmlSKey struct {
-	Name  string `xml:"name,attr"`
-	Value string `xml:",chardata"`
+	Entries []struct {
+		Content struct {
+			Data string `json:"eai:data"`
+		} `json:"content"`
+	} `json:"entry"`
 }
 
 func dashboardCreate(c *resty.Client, d *Dashboard) (r *Dashboard, err error) {
-	body := fmt.Sprintf("name=%s&eai:data=%s", d.Name, d.Data)
-	_, err = c.R().SetBody([]byte(body)).Post(fmt.Sprintf("serviceNS/%s/search/data/ui/views", c.UserInfo.Username))
+	body := fmt.Sprintf("name=%s&eai:data=%s", url.QueryEscape(d.Name), d.Data)
+	resp, err := c.R().SetBody([]byte(body)).Post(fmt.Sprintf("/servicesNS/%s/search/data/ui/views", c.UserInfo.Username))
 	if err != nil {
 		return r, err
 	}
+
+	log.Printf("[DEBUG] response: %+v", resp)
 
 	return dashboardRead(c, d.Name)
 
 	return r, err
 }
 
+func dashboardDelete(c *resty.Client, n string) (err error) {
+	resp, err := c.R().Delete(fmt.Sprintf("servicesNS/%s/search/data/ui/views/%s", c.UserInfo.Username, n))
+	log.Printf("[DEBUG] response: %+v", resp)
+	return err
+}
+
 func dashboardRead(c *resty.Client, n string) (r *Dashboard, err error) {
-	resp, err := c.R().Get(fmt.Sprintf("serviceNS/%s/search/data/ui/views/%s", c.UserInfo.Username, n))
+	resp, err := c.R().Get(fmt.Sprintf("servicesNS/%s/search/data/ui/views/%s", c.UserInfo.Username, n))
 	if err != nil {
 		return r, err
 	}
+	log.Printf("[DEBUG] response: %+v", resp)
+	log.Printf("[DEBUG] response body: %+v", string(resp.Body()))
 
 	var dbr dashboardResponse
-	xml.Unmarshal(resp.Body(), &dbr)
-	keys := dbr.Entry.Content.SDict.Keys
-	var dbrData string
-	for _, n := range keys {
-		if n.Name == "eai:data" {
-			dbrData = n.Value
-		}
-	}
+	json.Unmarshal(resp.Body(), &dbr)
 
 	r = &Dashboard{
 		Name: n,
-		Data: dbrData,
+		Data: dbr.Entries[0].Content.Data,
 	}
 
 	return r, err

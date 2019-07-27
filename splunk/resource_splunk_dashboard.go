@@ -5,14 +5,13 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	resty "gopkg.in/resty.v1"
 )
 
 func resourceSplunkDashboard() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceSplunkDashboardCreate,
 		Read:   resourceSplunkDashboardRead,
-		Update: resourceSplunkDashboardUpdate,
+		Update: resourceSplunkDashboardCreate,
 		Delete: resourceSplunkDashboardDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
@@ -24,7 +23,6 @@ func resourceSplunkDashboard() *schema.Resource {
 				Required: true,
 			},
 			"data": {
-				ForceNew: true,
 				Type:     schema.TypeString,
 				Required: true,
 			},
@@ -41,24 +39,30 @@ func dashboardFromResourceData(d *schema.ResourceData) (r *Dashboard) {
 }
 
 func resourceSplunkDashboardCreate(d *schema.ResourceData, meta interface{}) error {
-	c := meta.(*resty.Client)
+	c, _ := meta.(*Config).RestClient()
 	db := dashboardFromResourceData(d)
 
 	log.Printf("[DEBUG] Splunk Dashboard create configuration: %#v", db)
 
-	r, err := dashboardCreate(c, db)
+	_, err := dashboardCreate(c, db)
 	if err != nil {
-		return fmt.Errorf("Failed to create saved search: %s", err)
+		return fmt.Errorf("Failed to create splunk dashboard: %s", err)
 	}
-
-	d.SetId(r.Name)
+	d.SetId(db.Name)
 
 	log.Printf("[INFO] Splunk Dashboard ID: %s", d.Id())
-
 	return resourceSplunkDashboardRead(d, meta)
 }
 
 func resourceSplunkDashboardRead(d *schema.ResourceData, meta interface{}) error {
+	c, _ := meta.(*Config).RestClient()
+	db, err := dashboardRead(c, d.Id())
+	if err != nil {
+		return err
+	}
+
+	d.Set("data", db.Data)
+
 	return nil
 }
 
@@ -67,5 +71,7 @@ func resourceSplunkDashboardUpdate(d *schema.ResourceData, meta interface{}) err
 }
 
 func resourceSplunkDashboardDelete(d *schema.ResourceData, meta interface{}) error {
-	return nil
+	c, _ := meta.(*Config).RestClient()
+	err := dashboardDelete(c, d.Id())
+	return err
 }

@@ -24,6 +24,7 @@ plan.out
 *.iml
 *.test
 *.iml
+.env
 
 website/vendor
 

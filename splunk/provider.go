@@ -40,6 +40,7 @@ func Provider() terraform.ResourceProvider {
 
 		ResourcesMap: map[string]*schema.Resource{
 			"splunk_saved_search": resourceSplunkSavedSearch(),
+			"splunk_dashboard":    resourceSplunkDashboard(),
 		},
 
 		ConfigureFunc: providerConfigure,
@@ -54,5 +55,10 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		InsecureSkipVerify: d.Get("insecure_skip_verify").(bool),
 	}
 
-	return config.Client()
+	_, err := config.Client()
+	if err != nil {
+		return config, err
+	}
+
+	return &config, nil
 }
